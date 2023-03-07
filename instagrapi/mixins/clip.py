@@ -2,6 +2,7 @@ import json
 import random
 import tempfile
 import time
+import contextlib
 from pathlib import Path
 from typing import Dict, List
 from uuid import uuid4
@@ -385,13 +386,15 @@ def analyze_video(path: Path, thumbnail: Path = None) -> tuple:
         raise Exception("Please install moviepy>=1.0.3 and retry")
 
     print(f'Analyzing CLIP file "{path}"')
-    video = mp.VideoFileClip(str(path))
-    width, height = video.size
-    if not thumbnail:
-        thumbnail = f"{path}.jpg"
-        print(f'Generating thumbnail "{thumbnail}"...')
-        video.save_frame(thumbnail, t=(video.duration / 2))
-        crop_thumbnail(thumbnail)
+    with contextlib.ExitStack() as stack:
+        video = mp.VideoFileClip(str(path))
+        width, height = video.size
+        if not thumbnail:
+            thumbnail = f"{path}.jpg"
+            print(f'Generating thumbnail "{thumbnail}"...')
+            video.save_frame(thumbnail, t=(video.duration / 2))
+            crop_thumbnail(thumbnail)
+        stack.enter_context(contextlib.closing(video))
     return thumbnail, width, height, video.duration
 
 
